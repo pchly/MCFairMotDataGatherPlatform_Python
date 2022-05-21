@@ -1,0 +1,23 @@
+<RCC>
+  <qresource prefix="toolButton">
+    <file>static/generateAnnotaton.png</file>
+    <file>static/generateImgList.png</file>
+    <file>static/down_show.png</file>
+    <file>static/scanCamera.png</file>
+    <file>static/down_change.png</file>
+    <file>static/up_change.png</file>
+    <file>static/json.png</file>
+    <file>static/jsontotxt.png</file>
+    <file>static/last.png</file>
+    <file>static/next.png</file>
+    <file>static/txt.png</file>
+    <file>static/clipVideo.png</file>
+    <file>static/datasetClip.png</file>
+    <file>static/dir.png</file>
+    <file>static/camera.png</file>
+    <file>static/closeCamera.png</file>
+    <file>static/endJaw.png</file>
+    <file>static/endNone02.png</file>
+    <file>static/endSuck.png</file>
+  </qresource>
+</RCC>
