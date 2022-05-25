@@ -14,6 +14,7 @@ import glob
 import shutil
 from clipVideo import clipvideo
 from dataSetClipsToTaV import dataSetClipsTaV
+from ContoursPCA import getRotateDegreeUsingPCA
 
 
 
@@ -37,6 +38,7 @@ class mainWindow(QMainWindow):
         self.isSaveVideoChecked = False
         self.isSaveVideoOutSeted = False
         self.trainRate=self.ui.spinBox_trainRate.value()
+        self.valRate=self.ui.spinBox_valRate.value()
         self.saveVideo_dir = "./visdrone_mcmot/videos/"
         self.out_images_seq_path = "./visdrone_mcmot/images/"
         self.train_image_list = []
@@ -49,6 +51,7 @@ class mainWindow(QMainWindow):
         self.checkImgIndex = 0
         self.FrameGapToClipVideo = 10
         self.label_list = ['cup','box']
+        self.numFramePreVideo = 10
         # self.label_list=['cat','dog']
         # 初始化
         self.init_ui()
@@ -76,6 +79,7 @@ class mainWindow(QMainWindow):
         self.ui.toolButton_changeDir.clicked.connect(self.click_toolButton_changeDir)
         self.ui.toolButton_datasetClip.clicked.connect(self.click_toolButton_datasetClip)
         self.ui.spinBox_trainRate.valueChanged.connect(self.valueChanged_spinBox_trainRate)
+        self.ui.spinBox_valRate.valueChanged.connect(self.valueChanged_spinBox_valRate)
         self.ui.spinBox_frameGap.valueChanged.connect(self.valueCahnged_spinBox_frameGap)
         self.ui.toolButton_clipVideo.clicked.connect(self.click_toolButton_clipVideo)
         self.ui.toolButton_generateAnnotation.clicked.connect(self.click_toolButton_generateAnnotation)
@@ -86,6 +90,10 @@ class mainWindow(QMainWindow):
         self.ui.spinBox_allcheck.valueChanged.connect(self.valueChanged_num_of_allcheck)
         self.ui.toolButton_checkFromTxt.clicked.connect(self.click_toolButton_checkFromTxt)
         self.ui.toolButton_generateImgList.clicked.connect(self.click_toolButton_generateImgList)
+        self.ui.toolButton_generatePico.clicked.connect(self.click_toolButton_generatePico)
+        self.ui.toolButton_contoursPCA.clicked.connect(self.click_toolButton_contoursPCA)
+        self.ui.spinBox_picodata_num.valueChanged.connect(self.valueChangeed_spinBox_picodata_num)
+        self.ui.toolButton_transToCOCO.clicked.connect(self.click_toolButton_transToCOCO)
         #菜单项的槽函数绑定
         self.ui.actionOpenFile.triggered.connect(self.menu_click_OpenFile)
         self.ui.actionOpenFile.setShortcut('Ctrl+O')#设置菜单项的快捷键
@@ -201,11 +209,13 @@ class mainWindow(QMainWindow):
 
     def click_toolButton_datasetClip(self):
         if self.datasetclip_inst == None:
-            self.datasetclip_inst = dataSetClipsTaV(self.saveVideo_dir, self.trainRate)
+            self.datasetclip_inst = dataSetClipsTaV(self.saveVideo_dir, self.trainRate,self.valRate)
         self.datasetclip_inst.run()
 
     def valueChanged_spinBox_trainRate(self,trainRate_value):
         self.trainRate = trainRate_value
+    def valueChanged_spinBox_valRate(self,valRate_value):
+        self.valRate = valRate_value
     def valueCahnged_spinBox_frameGap(self,FGapValue):
         self.FrameGapToClipVideo = FGapValue
     def click_toolButton_clipVideo(self):
@@ -281,6 +291,80 @@ class mainWindow(QMainWindow):
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
         # return
+    def cut_roi_from_txt(self, img_path, txt_path):
+        src_img = cv2.imread(img_path)
+        # src_img = cv2.cvtColor(src_img, cv2.COLOR_BGR2RGB)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        h, w = src_img.shape[:2]
+        with open(txt_path, "r", encoding='utf-8') as f:
+            lines = f.readlines()
+        txt_file_name = txt_path.split("\\")[-1].split(".txt")[0]
+        print("txt_file_name:",txt_file_name)
+        pico_img_path = txt_path.replace(".txt",".jpg").replace("images","cut_roi_pico_img").replace("labels_with_ids","pico_labelme_imgs")
+        pico_img_path = pico_img_path.split(".jpg")[0]
+        separate_path_to_build = pico_img_path.split("\\")[0] + "/" + pico_img_path.split("\\")[1]
+
+        print("dir :",separate_path_to_build)
+        if not os.path.isdir(separate_path_to_build):
+            os.makedirs(separate_path_to_build)
+
+        for line in lines:
+            data = line.split(' ')
+            label = self.label_list[int(data[0])]
+            id = data[1]
+            putTextStr = "%s:%s" % (label, id)
+            x1 = int((float(data[2]) - float(data[4]) / 2) * w)
+            y1 = int((float(data[3]) - float(data[5]) / 2) * h)
+            x2 = int((float(data[2]) + float(data[4]) / 2) * w)
+            y2 = int((float(data[3]) + float(data[5]) / 2) * h)
+            p1 = (x1, y1)
+            p2 = (x2, y2)
+            rect=(p1,p2)
+            print(rect)
+            pico_img_path = pico_img_path + "_" + label + id + ".png"
+            uni_pico_img_path = self.uni_img_path_to_build + txt_file_name + "_" + label + id + ".png"
+            print("pico_img_path:", pico_img_path)
+            pico_img = src_img[y1:y2, x1:x2]
+            print("999")
+            pico_img = cv2.resize(pico_img, (300, 400), interpolation=cv2.INTER_LINEAR)
+            print("888")
+            cv2.imwrite(pico_img_path, pico_img)
+            cv2.imwrite(uni_pico_img_path, pico_img)
+            print("77")
+            # cv2.rectangle(src_img, p1, p2, (0, 250, 0), 1)
+            # cv2.putText(src_img, putTextStr, p1, font, 0.5, (0, 255, 255), 1)
+
+    def valueChangeed_spinBox_picodata_num(self,picodata_num):
+        self.numFramePreVideo = picodata_num
+    def click_toolButton_generatePico(self):
+        self.uni_img_path_to_build = "./visdrone_mcmot/pico_labelme_imgs/images/"
+        self.uni_anno_path_to_build = "./visdrone_mcmot/pico_labelme_imgs/annotations/"
+        if not os.path.isdir(self.uni_img_path_to_build):
+            os.makedirs(self.uni_img_path_to_build)
+        if not os.path.isdir(self.uni_anno_path_to_build):
+            os.makedirs(self.uni_anno_path_to_build)
+        for train_val in os.listdir(self.labels_with_ids_path):
+            train_val_dir = os.path.join(self.labels_with_ids_path, train_val)
+            # 如果是一个子目录就继续for循环，跳过下面的步骤，继续下一个循环
+            if os.path.isdir(train_val_dir):
+                for videos in os.listdir(train_val_dir):
+                    videos_dir = os.path.join(train_val_dir, videos)
+                    num_of_roi = 0
+                    for video_images in os.listdir(videos_dir):
+                        video_images_dir = os.path.join(videos_dir, video_images)
+                        self.num_of_check = self.num_of_check + 1
+                        print("txt_path:\t", video_images_dir)
+                        img_name = video_images_dir.split("\\")[-1].split(".")[0] + ".jpg"
+                        img_train_val_path = os.path.join(self.out_images_seq_path, train_val)
+                        img_video_path = os.path.join(img_train_val_path, videos)
+                        img_path = os.path.join(img_video_path, img_name)
+                        print("img_path:\t", img_path)
+                        num_of_roi = num_of_roi + 1
+                        if num_of_roi <= self.numFramePreVideo:
+                            self.cut_roi_from_txt(img_path, video_images_dir)
+    def click_toolButton_transToCOCO(self):
+        os.system("python x2coco.py --dataset_type=labelme --json_input_dir=./visdrone_mcmot/pico_labelme_imgs/annotations --image_input_dir=./visdrone_mcmot/pico_labelme_imgs/images --output_dir=./visdrone_mcmot/pico_labelme_imgs/coco --train_proportion=0.8 --val_proportion=0.1 --test_proportion=0.1")  # 运行python文件
+
     def click_toolButton_generateImgList(self):
         # for seq in sorted(glob.glob('./visdrone_mcmot/images/train' + "/*")):
         for train_val in os.listdir("visdrone_mcmot/images/"):
@@ -475,6 +559,13 @@ class mainWindow(QMainWindow):
                                 self.show_label_from_json(img_path, json_d)
             else:
                 self.num_of_check = 0
+
+    def click_toolButton_contoursPCA(self):
+        ssrc = cv2.imread("./test.jpg")
+        print("123")
+        angle , result  = getRotateDegreeUsingPCA(ssrc)
+        print("0000")
+        self.ui.label_imgShow.setPixmap(QtGui.QPixmap.fromImage(result))
 
 
 

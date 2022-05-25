@@ -6,13 +6,14 @@ from glob import glob
 
 
 class dataSetClipsTaV(object):
-    def __init__(self, video_path, rate):
+    def __init__(self, video_path, train_rate,val_rate):
         """
         :param video_path: 视频文件路径
         :param rate:  训练集的比例
         """
-        self.video_path=video_path
-        self.rate=rate
+        self.video_path = video_path
+        self.trainRate = train_rate
+        self.valRate = val_rate
 
 
     def mymovefile(self,srcfile,dstpath):                       # 移动函数
@@ -44,19 +45,26 @@ class dataSetClipsTaV(object):
         all_videos = os.listdir(self.video_path)  # 返回指定文件夹下的视频文件
         # video = glob(self.video_path + '*')
         print(all_videos)
-        num_of_train= int(len(all_videos)*self.rate/100)
+        num_of_train= int(len(all_videos)*self.trainRate/100)
         print(num_of_train)
         train_videos = random.sample(all_videos,num_of_train)
         print(train_videos)
         for video_file in train_videos:
             # self.mymovefile(self.video_path + video_file,self.video_path + "/train/")
             self.mycopyfile(self.video_path + video_file, self.video_path + "/train/")
-        val_videos = os.listdir(self.video_path)
-        val_videos = [item for item in all_videos if item not in train_videos]
+        # val_videos = os.listdir(self.video_path)
+        val_and_test_videos = [item for item in all_videos if item not in train_videos]
+        num_of_val = int(len(all_videos) * self.valRate / 100)
+        print(num_of_val)
+        val_videos = random.sample(val_and_test_videos, num_of_val)
+        print(val_videos)
         for video_file in val_videos:
             # self.mymovefile(self.video_path + video_file,self.video_path + "/val/")
             self.mycopyfile(self.video_path + video_file, self.video_path + "/val/")
-
+        test_videos = [item for item in val_and_test_videos if item not in val_videos]
+        for video_file in val_videos:
+            # self.mymovefile(self.video_path + video_file,self.video_path + "/val/")
+            self.mycopyfile(self.video_path + video_file, self.video_path + "/test/")
 
 
 
