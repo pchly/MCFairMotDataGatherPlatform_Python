@@ -1,5 +1,7 @@
 <RCC>
   <qresource prefix="toolButton">
+    <file>static/roi.png</file>
+    <file>static/transcoco.png</file>
     <file>static/generateAnnotaton.png</file>
     <file>static/generateImgList.png</file>
     <file>static/down_show.png</file>
