@@ -31,8 +31,8 @@ parent_path = os.path.abspath(os.path.join(__file__, *(['..'] * 2)))
 sys.path.insert(0, parent_path)
 
 from mot import JDETracker
-from mot.utils import MOTTimer, write_mot_results, flow_statistic
-from mot.visualize import plot_tracking, plot_tracking_dict
+from mot.utils_self import MOTTimer, write_mot_results, flow_statistic
+from mot.visualize_self import plot_tracking, plot_tracking_dict
 
 deploy_path = os.path.abspath(os.path.join(__file__, *(['..'] * 3)))
 pico_path =  os.path.abspath(os.path.join(deploy_path, "python"))
@@ -310,6 +310,7 @@ class JDE_Detector(Detector):
         records = None
         if self.draw_center_traj:
             center_traj = [{} for i in range(num_classes)]
+            top_center_traj = [{} for i in range(num_classes)]
         if num_classes == 1:
             id_set = set()
             interval_id_set = set()
@@ -336,16 +337,17 @@ class JDE_Detector(Detector):
             timer.toc()
             online_tlwhs, online_scores, online_ids = mot_results[0]
             roi_img_path = '' 
+            
             if len(online_tlwhs) > 0:
-                print("online_tlwhs:",online_tlwhs)
+                # print("online_tlwhs:",online_tlwhs)
                 num_ids = 0
                 for i in online_tlwhs:
                     class_id_mot = online_tlwhs[i]
-                    print("class_id_mot:",class_id_mot)
+                    # print("class_id_mot:",class_id_mot)
                     roi_img_path = "/home/aistudio/data/PaddleDetection/deploy/pptracking/python/roiImg/" + str(frame_id) + "_" + str(num_ids) + "_frame.png"
                     num_ids = num_ids + 1
-                    print("roi_img_path:",roi_img_path)
-                    print('online_tlwhs[i][0]',i,"--",online_tlwhs[i][0])
+                    # print("roi_img_path:",roi_img_path)
+                    # print('online_tlwhs[i][0]',i,"--",online_tlwhs[i][0])
                     x = int(online_tlwhs[i][0][0]);
                     y = int(online_tlwhs[i][0][1]);
                     w = int(online_tlwhs[i][0][2]);
@@ -356,27 +358,41 @@ class JDE_Detector(Detector):
                         pico_all_results = runPicTest(pico_detector,roi_img_path)
                         pico_results_boxes = pico_det_rect(pico_all_results['boxes'],0.6)
                         #pico_results_boxes--matix element:[class, score, x_min, y_min, x_max, y_max]
-                        print("-------pico_results:-----------",pico_results_boxes)
-                        for i in range(len(pico_results_boxes)):
-                            roi_x1 = int(pico_results_boxes[i][2])
-                            roi_y1 = int(pico_results_boxes[i][3])
-                            roi_x2 = int(pico_results_boxes[i][4])
-                            roi_y2 = int(pico_results_boxes[i][5])
-                            roi_w = roi_x2 - roi_x1
-                            roi_h = roi_y2 - roi_y1
-                            p1 = (x + roi_x1,y + roi_y1)
-                            p2 = (x + roi_x2,y + roi_y2)
-                            putTextStr = str(label_list_roi[int(pico_results_boxes[i][0])] + str(pico_results_boxes[i][1]))
-                            cv2.rectangle(frame, p1, p2, (0, 255, 0), 1)
-                            cv2.putText(frame, putTextStr, p1, cv2.FONT_HERSHEY_SIMPLEX, 0.2, (0, 255, 255), 1)
-                            big_rect_center = (x + w//2,y +h//2)
-                            small_rect_center = (x + roi_x1 + roi_w//2,y + roi_y1 + roi_h//2)
-                            cv2.arrowedLine(frame, big_rect_center, small_rect_center, (0,0,255),1,8,0,0.3)
+                        # print("-------pico_results:-----------",pico_results_boxes)
+                        for j in range(len(pico_results_boxes)):
+                            if j == 0:
+                                
+                                roi_x1 = int(pico_results_boxes[j][2])
+                                roi_y1 = int(pico_results_boxes[j][3])
+                                roi_x2 = int(pico_results_boxes[j][4])
+                                roi_y2 = int(pico_results_boxes[j][5])
+                                roi_w = roi_x2 - roi_x1
+                                roi_h = roi_y2 - roi_y1
+                                p1 = (x + roi_x1,y + roi_y1)
+                                p2 = (x + roi_x2,y + roi_y2)
+                                putTextStr = str(label_list_roi[int(pico_results_boxes[j][0])] + str(pico_results_boxes[j][1]))
+                                cv2.rectangle(frame, p1, p2, (0, 255, 0), 1)
+                                cv2.putText(frame, putTextStr, p1, cv2.FONT_HERSHEY_SIMPLEX, 0.2, (0, 255, 255), 1)
+                                big_rect_center = (x + w//2,y +h//2)
+                                small_rect_center = (x + roi_x1 + roi_w//2,y + roi_y1 + roi_h//2)
+                                # top_online_tlwhs[i].push([roi_x1,roi_y1,roi_w,roi_h])
+                                # print("=====online_tlwhs[i][0]:====",online_tlwhs[i][0])
+                                online_tlwhs_list = online_tlwhs[i][0].tolist()
+                                online_tlwhs_list.append(online_tlwhs[i][0][0] + pico_results_boxes[j][2])
+                                online_tlwhs_list.append(online_tlwhs[i][0][1] + pico_results_boxes[j][3])
+                                online_tlwhs_list.append(pico_results_boxes[j][4]-pico_results_boxes[j][2])
+                                online_tlwhs_list.append(pico_results_boxes[j][5]-pico_results_boxes[j][3])
+                                online_tlwhs[i][0] = np.array(online_tlwhs_list)
+                                
+                                # print("=====online_tlwhs[i][0]:====",online_tlwhs[i][0])
+                                # top_center_list[]
+                                cv2.arrowedLine(frame, big_rect_center, small_rect_center, (0,0,255),1,8,0,0.3)
             # print("frame--",frame)
-            for cls_id in range(num_classes):
-                results[cls_id].append(
-                    (frame_id + 1, online_tlwhs[cls_id], online_scores[cls_id],
-                     online_ids[cls_id]))
+            # print("=====top_online_tlwhs:====",top_online_tlwhs)
+            # for cls_id in range(num_classes):
+            #     results[cls_id].append(
+            #         (frame_id + 1, online_tlwhs[cls_id], online_scores[cls_id],
+            #          online_ids[cls_id]))
 
             # NOTE: just implement flow statistic for single class
             if num_classes == 1:
@@ -389,7 +405,8 @@ class JDE_Detector(Detector):
                 records = statistic['records']
 
             fps = 1. / timer.duration
-            im = plot_tracking_dict(
+            # print("==================plot_tracking_dict=================")
+            im , angles = plot_tracking_dict(
                 frame,
                 num_classes,
                 online_tlwhs,
@@ -402,7 +419,15 @@ class JDE_Detector(Detector):
                 entrance=entrance,
                 records=records,
                 center_traj=center_traj)
-
+            # print("---------angles------",angles)
+            if angles:
+                # print("online_scores456789============",online_scores) 
+                for cls_id in range(num_classes):
+                    # print("----online_scores456789============",online_scores[cls_id]) 
+                    results[cls_id].append(
+                        (frame_id + 1, online_tlwhs[cls_id], online_scores[cls_id],
+                        online_ids[cls_id],angles[cls_id]))
+           
             writer.write(im)
             if camera_id != -1:
                 cv2.imshow('Mask Detection', im)
