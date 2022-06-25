@@ -1,5 +1,6 @@
 import sys
 import os
+import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtGui import QDesktopServices
@@ -12,9 +13,12 @@ import cv2
 import json
 import glob
 import shutil
+import math
 from clipVideo import clipvideo
 from dataSetClipsToTaV import dataSetClipsTaV
 from ContoursPCA import getRotateDegreeUsingPCA
+
+from getDataFromRealSense import getDataFromRealSense
 
 
 
@@ -28,9 +32,12 @@ class mainWindow(QMainWindow):
 
         self.timer_camera = QtCore.QTimer()  # 定时器
         self.timer_processBar = QtCore.QTimer()  # 定时器
+        self.startGatherTome_ms = 0.0
+        self.stopGatherTime_ms = 0.0
         self.clipVideo_inst = None
         self.datasetclip_inst = None
-        self.cap = cv2.VideoCapture()  # 准备获取图像
+        self.cap = cv2.VideoCapture()  # cv获取图像
+        self.realSenseSensor = None #realSense获取图像
         self.CAM_NUM = 0
         self.frame_size=(0,0)
         self.FPS=0
@@ -40,7 +47,19 @@ class mainWindow(QMainWindow):
         self.trainRate=self.ui.spinBox_trainRate.value()
         self.valRate=self.ui.spinBox_valRate.value()
         self.saveVideo_dir = "./visdrone_mcmot/videos/"
+        self.saveDepthVideo_dir = "./visdrone_mcmot/depth_videos/"
         self.out_images_seq_path = "./visdrone_mcmot/images/"
+        self.delete_images_path = "./visdrone_mcmot/deleteImages/"
+        self.pico_images_path = "./visdrone_mcmot/pico_labelme_imgs/images"
+        self.pico_annotations_path = "./visdrone_mcmot/pico_labelme_imgs/annotations"
+        self.pico_delete_images = "./visdrone_mcmot/pico_labelme_imgs/deleteImgs"
+        self.imagesCountAll = 0
+        self.imagesDeleteCount = 0
+        self.imagesSurplusCount = 0
+        self.PICOimagesCountAll = 0
+        self.PICOimagesDeleteCount = 0
+        self.PICOimagesSurplusCount = 0
+
         self.train_image_list = []
         self.val_image_list = []
         self.annotations_path = "./visdrone_mcmot/annotations/"
@@ -50,14 +69,22 @@ class mainWindow(QMainWindow):
         self.num_of_check = 0
         self.checkImgIndex = 0
         self.FrameGapToClipVideo = 10
-        self.label_list = ['cup','box']
+        self.label_list = []
         self.numFramePreVideo = 10
-        # self.label_list=['cat','dog']
+        # self.label_list=['Bottled','Bagged','Boxed','Canned','Mug','Vials']
         # 初始化
         self.init_ui()
 
     # ui初始化
     def init_ui(self):
+
+        #读取label_list.txt文件
+        with open("./visdrone_mcmot/label_list.txt", "r", encoding='utf-8') as f:
+            lines = f.readlines()
+        for line in lines:
+            line= line.split("\n")[0]
+            self.label_list.append(line)
+            print(self.label_list)
         # 初始化方法，这里可以写按钮绑定等的一些初始函数
         self.pbar = QProgressBar(self)
 
@@ -73,6 +100,8 @@ class mainWindow(QMainWindow):
         self.ui.toolButton_openCamera.clicked.connect(self.click_button_openCamera)
         self.timer_camera.timeout.connect(self.show_camera)
         self.timer_processBar.timeout.connect(self.processBarFlesh)
+        self.ui.toolButton_startGather.clicked.connect(self.click_toolButton_startGather)
+        self.ui.toolButton_stopGather.clicked.connect(self.click_toolButton_stopGather)
         self.ui.toolButton_closeCamera.clicked.connect(self.click_button_closeCamera)
         self.ui.checkBox_saveVideo.stateChanged.connect(self.checkBox_saveVideo_stateChanged)
         # self.ui.toolButton_changeSaveDirAndName.clicked.connect(self.click_toolButton_changeSaveDirAndName)
@@ -82,6 +111,8 @@ class mainWindow(QMainWindow):
         self.ui.spinBox_valRate.valueChanged.connect(self.valueChanged_spinBox_valRate)
         self.ui.spinBox_frameGap.valueChanged.connect(self.valueCahnged_spinBox_frameGap)
         self.ui.toolButton_clipVideo.clicked.connect(self.click_toolButton_clipVideo)
+        self.ui.toolButton_VideoAnalyse.clicked.connect(self.click_toolButton_VideoAnalyse)
+        self.ui.toolButton_filterData.clicked.connect(self.click_toolButton_filterData)
         self.ui.toolButton_generateAnnotation.clicked.connect(self.click_toolButton_generateAnnotation)
         self.ui.toolButton_checkFromJson.clicked.connect(self.click_toolButton_checkFromJson)
         self.ui.toolButton_jsonToTxt.clicked.connect(self.click_toolButton_jsonToTxt)
@@ -90,8 +121,9 @@ class mainWindow(QMainWindow):
         self.ui.spinBox_allcheck.valueChanged.connect(self.valueChanged_num_of_allcheck)
         self.ui.toolButton_checkFromTxt.clicked.connect(self.click_toolButton_checkFromTxt)
         self.ui.toolButton_generateImgList.clicked.connect(self.click_toolButton_generateImgList)
+        self.ui.toolButton_picodatafilter.clicked.connect(self.click_tooloButton_picodatafilter)
         self.ui.toolButton_generatePico.clicked.connect(self.click_toolButton_generatePico)
-        self.ui.toolButton_contoursPCA.clicked.connect(self.click_toolButton_contoursPCA)
+        self.ui.toolButton_startTest.clicked.connect(self.click_toolButton_startTest)
         self.ui.spinBox_picodata_num.valueChanged.connect(self.valueChangeed_spinBox_picodata_num)
         self.ui.toolButton_transToCOCO.clicked.connect(self.click_toolButton_transToCOCO)
         #菜单项的槽函数绑定
@@ -106,36 +138,59 @@ class mainWindow(QMainWindow):
         self.show()
     def comboBox_activated_cameraDeviceList(self,text):
         print("text:",text)
-        if text == "Integrated Camera":
-            self.CAM_NUM = 0
-            print("Cam_num :",self.CAM_NUM)
-        if text == "LRCP USB2.0" :
-            self.CAM_NUM = 1
+        # if text == "Integrated Camera":
+        #     self.CAM_NUM = self.camera_id_lis.index("Integrated Camera")
+        #     print("Cam_num :",self.CAM_NUM)
+        # elif text == "LRCP USB2.0" :
+        #     self.CAM_NUM = self.camera_id_lis.index("LRCP USB2.0")
+        #     print("Cam_num :", self.CAM_NUM)
+        # elif text == "Intel(R) RealSense(TM) Depth Camera 435i Depth" or "Intel(R) RealSense(TM) Depth Camera 435i RGB" :
+        #     self.CAM_NUM = 10
+        #     print("Cam_num :", self.CAM_NUM)
+
+        if text == "Intel(R) RealSense(TM) Depth Camera 435i Depth" or text == "Intel(R) RealSense(TM) Depth Camera 435i RGB" :
+            self.CAM_NUM = 10
+            print("Cam_num :", self.CAM_NUM)
+        else:
+            self.CAM_NUM = self.camera_id_lis.index(text)
             print("Cam_num :", self.CAM_NUM)
     def click_toolButton_scanCamera(self):
         pygame.camera.init()
-        camera_id_lis = pygame.camera.list_cameras()
-        print(camera_id_lis)
-        self.ui.comboBox_cameraDeviceList.addItems(camera_id_lis)
+        self.camera_id_lis = pygame.camera.list_cameras()
+        print(self.camera_id_lis)
+        self.ui.comboBox_cameraDeviceList.addItems(self.camera_id_lis)
     def click_button_openCamera(self):
 
         if self.timer_camera.isActive() == False:
-            flag = self.cap.open(self.CAM_NUM)
-            if flag == False:
-                msg = QtWidgets.QMessageBox.warning(
-                    self, u"Warning", u"请检测相机与电脑是否连接正确",
-                    buttons=QtWidgets.QMessageBox.Ok,
-                    defaultButton=QtWidgets.QMessageBox.Ok)
-            else:
-                self.frame_size = (int(self.cap.get(3)), int(self.cap.get(4)))  # 获取摄像头分辨率
-                self.FPS = self.cap.get(5)  # 获取摄像头帧率
+            if self.CAM_NUM == 10:
+                self.realSenseSensor = getDataFromRealSense()
+                self.realSenseSensor.config_sensor()
+                self.frame_size = (int(self.realSenseSensor.color_height), int(self.realSenseSensor.color_width))  # 获取摄像头分辨率
+                self.FPS = self.realSenseSensor.color_frame_rate  # 获取摄像头帧率
                 self.timer_camera.start(30)
+            else:
+                flag = self.cap.open(self.CAM_NUM)
+                print("open camera by cv!")
+                if flag == False:
+                    msg = QtWidgets.QMessageBox.warning(
+                        self, u"Warning", u"请检测相机与电脑是否连接正确",
+                        buttons=QtWidgets.QMessageBox.Ok,
+                        defaultButton=QtWidgets.QMessageBox.Ok)
+                else:
+                    self.frame_size = (int(self.cap.get(3)), int(self.cap.get(4)))  # 获取摄像头分辨率
+                    self.FPS = self.cap.get(5)  # 获取摄像头帧率
+                    self.timer_camera.start(30)
 
     def show_camera(self):
 
-        flag, self.image = self.cap.read()
-        self.image=cv2.flip(self.image, 1) # 左右翻转
-        show = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+        if self.CAM_NUM == 10:
+            self.image,self.depth_img_nomap,self.depth_img_colormap,self.gyro,self.sensor_angles = self.realSenseSensor.getFrames()
+            show = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+
+        else:
+            flag, self.image = self.cap.read()
+            self.image = cv2.flip(self.image, 1) # 左右翻转
+            show = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
 
         if self.isSaveVideoChecked:
             if not(self.isSaveVideoOutSeted):
@@ -145,25 +200,66 @@ class mainWindow(QMainWindow):
                 time = QDateTime.currentDateTime()  # 获取现在的时间
                 timeplay = time.toString('yyyy_MM_dd_hh_mm_ss')  # 设置显示时间的格式
                 self.saveVideo_filepath = self.saveVideo_dir + "video_" + timeplay + ".mp4"
-                print(self.saveVideo_filepath)
+                self.saveDepthVideo_filepath = self.saveDepthVideo_dir + "video_" + timeplay + ".mp4"
+                # print(self.saveVideo_filepath)
                 self.out = cv2.VideoWriter(self.saveVideo_filepath, code, save_fps, self.frame_size,isColor=True)  # 保存视频的视频流
+                print(self.saveDepthVideo_filepath)
+                self.depth_out = cv2.VideoWriter(self.saveDepthVideo_filepath, code, save_fps, self.frame_size,
+                                                 isColor=False)  # 保存深度视频的视频流
+
                 self.isSaveVideoOutSeted = True
             if self.out.isOpened():  # 判断视频流是否创建成功
+                # 设置记录时间
+                currentTime = QDateTime.currentDateTime()  # 获取现在的时间
+                self.stopGatherTime_ms = currentTime.toMSecsSinceEpoch()
+                self.gatherTime = (self.stopGatherTime_ms - self.startGatherTome_ms) / 1000
+                self.ui.label_gatherTime.setText(str(self.gatherTime))
                 print('out is  opened')
                 self.out.write(self.image)
+                # self.depth_out.write(self.depth_img_colormap)
                 print('out is  writing...')
 
-        showImage = QtGui.QImage(show.data, show.shape[1], show.shape[0], QtGui.QImage.Format_RGB888)
+            if self.depth_out.isOpened():  # 判断视频流是否创建成功
+                print("shendu视频流创建成功")
+                self.depth_out.write(self.depth_img_nomap)
+
+        if self.CAM_NUM == 10:
+            color_and_depth_images = np.hstack((show, self.depth_img_colormap))
+            showImage = QtGui.QImage(color_and_depth_images.data, color_and_depth_images.shape[1], color_and_depth_images.shape[0], QtGui.QImage.Format_RGB888)
+
+            #设置角速度和欧拉角
+            self.ui.doubleSpinBox_gyrox.setValue(self.gyro.x)
+            self.ui.doubleSpinBox_gyroy.setValue(self.gyro.y)
+            self.ui.doubleSpinBox_gyroz.setValue(self.gyro.z)
+            self.ui.doubleSpinBo_x.setValue(self.sensor_angles[1])
+            self.ui.doubleSpinBox_y.setValue(self.sensor_angles[0])
+            self.ui.doubleSpinBox_z.setValue(self.sensor_angles[2])
+        else:
+            showImage = QtGui.QImage(show.data, show.shape[1], show.shape[0], QtGui.QImage.Format_RGB888)
         self.ui.label_imgShow.setPixmap(QtGui.QPixmap.fromImage(showImage))
         self.ui.label_imgShow.setScaledContents(True)
 
+    def click_toolButton_startGather(self):
+        currentTime = QDateTime.currentDateTime()  # 获取现在的时间
+        self.startGatherTome_ms = currentTime.toMSecsSinceEpoch()
+        self.stopGatherTime_ms = self.startGatherTome_ms
+        print("ms",self.startGatherTome_ms)
+        self.ui.checkBox_saveVideo.setCheckState(QtCore.Qt.Checked)
+    def click_toolButton_stopGather(self):
+        self.ui.checkBox_saveVideo.setCheckState(QtCore.Qt.Unchecked)
+        currentTime = QDateTime.currentDateTime()  # 获取现在的时间
+        self.stopGatherTime_ms = currentTime.toMSecsSinceEpoch()
+        self.gatherTime = (self.stopGatherTime_ms - self.startGatherTome_ms)/1000
+        self.ui.label_gatherTime.setText(str(self.gatherTime))
     def checkBox_saveVideo_stateChanged(self):
 
         if self.ui.checkBox_saveVideo.checkState() == QtCore.Qt.Checked:
             print("checked")
             self.isSaveVideoChecked = True
         else:
-            self.out.release()
+            if self.out.isOpened():
+                self.out.release()
+            self.depth_out.release()
             self.isSaveVideoChecked = False
             self.isSaveVideoOutSeted = False
             print("unchecked")
@@ -192,13 +288,17 @@ class mainWindow(QMainWindow):
             cacel.setText(u'取消')
 
             if msg.exec_() != QtWidgets.QMessageBox.RejectRole:
-
+                if self.realSenseSensor:
+                    self.realSenseSensor.stop_sensor()
+                    self.realSenseSensor = None
+                    print("stop realSense!")
                 if self.cap.isOpened():
                     self.cap.release()
                 if self.timer_camera.isActive():
                     self.timer_camera.stop()
                 if self.isSaveVideoChecked == True :
                     self.out.release()
+                    self.depth_out.release()
                     self.isSaveVideoOutSeted = False
                 # self.label_face.setText("<html><head/><body><p align=\"center\"><img src=\":/newPrefix/pic/Hint.png\"/><span style=\" font-size:28pt;\">点击打开摄像头</span><br/></p></body></html>")
 
@@ -231,6 +331,93 @@ class mainWindow(QMainWindow):
         self.pbar.setValue(self.clipVideo_inst.haveClipRate)
         # cv2.putText(img, str, (123,456)), font, 2, (0,255,0), 3)
         # 各参数依次是：图片，添加的文字，左上角坐标，字体，字体大小，颜色，字体粗细
+    def click_toolButton_VideoAnalyse(self):
+        print("123")
+        dataSetPart = ["train/", "val/","test/"]
+        first_video = True
+        self.haveAnalyseNum = 0
+        self.averange_frame_count = 0
+        self.max_frame_count = 0
+        self.min_frame_count = 0
+        self.averange_duration = 0
+        self.max_duration = 0
+        self.min_duration = 0
+
+        all_frame = 0
+        all_duration = 0
+        self.train_viseos_num = len(glob.glob(self.saveVideo_dir + "train/" + '*.mp4'))
+        self.val_viseos_num = len(glob.glob(self.saveVideo_dir + "val/" + '*.mp4'))
+        self.test_viseos_num = len(glob.glob(self.saveVideo_dir + "test/" + '*.mp4'))
+        self.allVideosNum = self.train_viseos_num + self.val_viseos_num + self.test_viseos_num
+        print("all videos num :", self.allVideosNum)
+        # 依次读取文件名
+        for videos_part in dataSetPart:
+            videos_files = os.listdir(self.saveVideo_dir + videos_part)
+            len_of_videos = len(videos_files)
+            for video_name in videos_files:
+                # print("video_name:", video_name)
+                # # 对文件名进行拆分处理
+                # file_name = video_name.split('.')[0]
+                # folder_name = self.save_path + "/" + videos_part + file_name  # 构成新目录存放视频帧
+                # os.makedirs(folder_name, exist_ok=True)  # 查看是否存在目录，否则创建
+                print("video_path:", self.saveVideo_dir + videos_part + video_name)
+                vc = cv2.VideoCapture(self.saveVideo_dir + videos_part + video_name)
+                # 获取视频帧率
+                fps = vc.get(cv2.CAP_PROP_FPS)
+                frame_count = vc.get(cv2.CAP_PROP_FRAME_COUNT)
+
+                duration = frame_count / fps
+                if first_video:
+                    self.max_frame_count = frame_count
+                    self.min_frame_count = frame_count
+                    self.max_duration = duration
+                    self.min_duration = duration
+                    first_video = False
+                if frame_count > self.max_frame_count:
+                    self.max_frame_count = frame_count
+                if frame_count < self.min_frame_count:
+                    self.min_frame_count = frame_count
+                if duration > self.max_duration:
+                    self.max_duration = duration
+                if duration < self.min_duration:
+                    self.min_duration = duration
+
+                all_frame = all_frame + frame_count
+                all_duration = all_duration + duration
+
+                print("fps:", fps)
+                # 判断视频是否可以打开
+                rval = vc.isOpened()
+                vc.release()
+                self.haveAnalyseNum = self.haveAnalyseNum + 1
+                self.haveAnalyseRate = 100 * (self.haveAnalyseNum) / self.allVideosNum
+        self.averange_frame_count = (all_frame - self.max_frame_count - self.min_frame_count) / (self.allVideosNum - 2)
+        self.averange_duration = (all_duration -self.max_duration - self.min_duration) / (self.allVideosNum - 2)
+
+        self.ui.label_maxseq.setText(str(self.max_frame_count / self.FrameGapToClipVideo))
+        self.ui.label_minseq.setText(str(self.min_frame_count / self.FrameGapToClipVideo))
+        self.ui.label_averangeseq.setText(str(self.averange_frame_count / self.FrameGapToClipVideo))
+        print("22222")
+        self.ui.label_allVideos.setText(str(self.allVideosNum))
+        self.ui.label_trainVideos.setText(str(self.train_viseos_num))
+        self.ui.label_valVideos.setText(str(self.val_viseos_num))
+        self.ui.label_testVideos.setText(str(self.test_viseos_num))
+        print("22222")
+        self.ui.label_maxframeCount.setText(str(self.max_frame_count))
+        self.ui.label_minframeCount.setText(str(self.min_frame_count))
+        self.ui.label_averangeframeCount.setText(str(self.averange_frame_count))
+        print("22222")
+        self.ui.label_maxDuration.setText(str(self.max_duration))
+        self.ui.label_minDuration.setText(str(self.min_duration))
+        self.ui.label_averangeDuration.setText(str(self.averange_duration))
+        print("22222")
+        print("self.averang_frame_count:", self.averange_frame_count)
+        print("self.max_frame_count:", self.max_frame_count)
+        print("self.min_frame_count:", self.min_frame_count)
+        print("self.averange_duration:",self.averange_duration)
+        print("self.max_duration:", self.max_duration)
+        print("self.min_duration:", self.min_duration)
+
     def processBarFlesh(self):
         self.pbar.setValue(self.clipVideo_inst.haveClipRate)
     def show_label_from_json(self,img_path, json_d):
@@ -242,6 +429,12 @@ class mainWindow(QMainWindow):
             point = item['points']
             id = item['group_id']
             label = item['label']
+            if label not in self.label_list:
+                self.ui.comboBox_labelList.addItem(label)
+                self.label_list.append(label)
+                print(self.label_list)
+                self.ui.label_numofClasses.setText(str(len(self.label_list)))
+
             putTextStr = "%s:%s" % (label, id)
             p1 = (int(point[0][0]), int(point[0][1]))
             p2 = (int(point[1][0]), int(point[1][1]))
@@ -250,7 +443,11 @@ class mainWindow(QMainWindow):
 
         showImage = QtGui.QImage(src_img.data, src_img.shape[1], src_img.shape[0], QtGui.QImage.Format_RGB888)
         self.checkedJsonImgs.append(showImage)
-
+        with open("./visdrone_mcmot/label_list.txt", 'w') as f:
+            for item in self.label_list:
+                f.write(item)
+                # f.write(" \n")
+                f.write("\n")
         if self.num_of_check == self.num_of_allcheck:
             self.ui.label_checkImgIndex.setText(str(self.checkImgIndex + 1))
             self.ui.label_imgShow.setPixmap(QtGui.QPixmap.fromImage(self.checkedJsonImgs[self.checkImgIndex]))
@@ -369,10 +566,10 @@ class mainWindow(QMainWindow):
         # for seq in sorted(glob.glob('./visdrone_mcmot/images/train' + "/*")):
         for train_val in os.listdir("visdrone_mcmot/images/"):
             for seq in os.listdir('visdrone_mcmot/images/' + train_val):
-                print("seq", seq)
+                print("seq---:", seq)
                 # for image in glob.glob(seq + "/video" + '*.jpg'):
                 for image in os.listdir("visdrone_mcmot/images/" + train_val + "/" + seq):
-                    # print("image", image)
+                    print("image", image)
                     # image = image.replace('PaddleDetection/dataset/mot/','')
                     if train_val == "train":
                         self.train_image_list.append("visdrone_mcmot/images/" + train_val + "/" + seq + "/" + image)
@@ -470,6 +667,69 @@ class mainWindow(QMainWindow):
                 f.write(" {} ".format(x2))
                 f.write(" {} ".format(y2))
                 f.write(" \n")
+
+    def click_toolButton_filterData(self):
+        self.imagesCountAll = 0
+        self.imagesDeleteCount = 0
+        self.imagesSurplusCount = 0
+        for train_val in os.listdir(self.out_images_seq_path):
+            train_val_dir = os.path.join(self.out_images_seq_path, train_val)
+            # 如果是一个子目录就继续for循环，跳过下面的步骤，继续下一个循环
+            if os.path.isdir(train_val_dir):
+                for jsons in os.listdir(train_val_dir):
+                    jsons_dir = os.path.join(train_val_dir, jsons)
+                    # print(jsons_dir)
+                    imageFiles_MoveTo_dir = self.delete_images_path + "/" + train_val + "/" + jsons
+                    # print("jsonFiles_MoveTo_dir:", jsonFiles_MoveTo_dir)
+                    # if not os.path.exists(jsonFiles_MoveTo_dir):  # 判断文件夹是否存在
+                    #     os.makedirs(jsonFiles_MoveTo_dir)  # 新建文件夹
+                    for images_files in glob.glob(jsons_dir + "/*.jpg"):
+                        print("images_files---+=:",images_files)
+                        self.imagesCountAll = self.imagesCountAll + 1
+                        print(" self.imagesCountAll:",self.imagesCountAll)
+                        json_files = images_files.split(".jpg")[0] + ".json"
+                        print(" json_files:", json_files)
+                        if not os.path.exists(json_files):
+                            print("delete images------------------")
+                            self.imagesDeleteCount = self.imagesDeleteCount+ 1
+                            if not os.path.exists(imageFiles_MoveTo_dir):  # 判断文件夹是否存在
+                                os.makedirs(imageFiles_MoveTo_dir)  # 新建文件夹
+                            if self.imagesCountAll != self.imagesDeleteCount:
+                                shutil.move(images_files, imageFiles_MoveTo_dir)  # 移动文件
+        if self.imagesCountAll == self.imagesDeleteCount:
+            self.ui.label_imageCountAll.setText(str(self.imagesCountAll))
+            self.ui.label_imageDeleteCount.setText(str(0))
+            self.ui.label_imageSurplusCount.setText(str(self.imagesCountAll))
+        else:
+            self.ui.label_imageCountAll.setText(str(self.imagesCountAll))
+            self.ui.label_imageDeleteCount.setText(str(self.imagesDeleteCount))
+            self.ui.label_imageSurplusCount.setText(str(self.imagesCountAll-self.imagesDeleteCount))
+
+    def click_tooloButton_picodatafilter(self):
+        self.PICOimagesCountAll = 0
+        self.PICOimagesDeleteCount = 0
+        self.PICOimagesSurplusCount = 0
+        for images_files in glob.glob(self.pico_images_path + "/*.png"):
+            print("images_files---+=:",images_files)
+            self.PICOimagesCountAll = self.PICOimagesCountAll + 1
+            # print(" self.imagesCountAll:",self.imagesCountAll)
+            json_files = images_files.split("/images")[0] + "/annotations" + images_files.split("/images")[1].replace(".png",".json")
+            print("json_files:", json_files)
+            if not os.path.exists(json_files):
+                print("delete images------------------")
+                self.PICOimagesDeleteCount = self.PICOimagesDeleteCount+ 1
+                if not os.path.exists(self.pico_delete_images):  # 判断文件夹是否存在
+                    os.makedirs(self.pico_delete_images)  # 新建文件夹
+                if self.PICOimagesCountAll != self.PICOimagesDeleteCount:
+                    shutil.move(images_files, self.pico_delete_images)  # 移动文件
+        if self.PICOimagesCountAll == self.PICOimagesDeleteCount:
+            self.ui.label_PICOimageCountAll.setText(str(self.PICOimagesCountAll))
+            self.ui.label_PICOimageDeleteCount.setText(str(0))
+            self.ui.label_PICOimageSurplusCount.setText(str(self.PICOimagesCountAll))
+        else:
+            self.ui.label_PICOimageCountAll.setText(str(self.PICOimagesCountAll))
+            self.ui.label_PICOimageDeleteCount.setText(str(self.PICOimagesDeleteCount))
+            self.ui.label_PICOimageSurplusCount.setText(str(self.PICOimagesCountAll-self.PICOimagesDeleteCount))
     def click_toolButton_generateAnnotation(self):
         print("123")
         for train_val in os.listdir(self.out_images_seq_path):
@@ -521,6 +781,8 @@ class mainWindow(QMainWindow):
                 if os.path.isdir(train_val_dir):
                     for videos in os.listdir(train_val_dir):
                         videos_dir = os.path.join(train_val_dir, videos)
+                        self.all_images_to_check_inThisDir = len(glob.glob(videos_dir + "/" + '*.txt'))
+                        self.have_check_inThisDir = 0
                         for video_images in os.listdir(videos_dir):
                             video_images_dir = os.path.join(videos_dir, video_images)
                             self.num_of_check = self.num_of_check + 1
@@ -530,6 +792,9 @@ class mainWindow(QMainWindow):
                             img_video_path = os.path.join(img_train_val_path, videos)
                             img_path = os.path.join(img_video_path, img_name)
                             print("img_path:\t", img_path)
+                            self.have_check_inThisDir = self.have_check_inThisDir + 1
+                            self.ui.statusbar.addWidget(self.pbar)
+                            self.pbar.setValue(100 * (self.have_check_inThisDir) / self.all_images_to_check_inThisDir)
                             self.show_label_from_txt(img_path, video_images_dir)
             else:
                 self.num_of_check = 0
@@ -545,6 +810,8 @@ class mainWindow(QMainWindow):
                 if os.path.isdir(train_val_dir):
                     for videos in os.listdir(train_val_dir):
                         videos_dir = os.path.join(train_val_dir, videos)
+                        self.all_images_to_check_inThisDir = len(glob.glob(videos_dir + "/" + '*.json'))
+                        self.have_check_inThisDir = 0
                         for video_images in os.listdir(videos_dir):
                             video_images_dir = os.path.join(videos_dir, video_images)
                             print("json_path:\t", video_images_dir)
@@ -556,16 +823,16 @@ class mainWindow(QMainWindow):
                                 img_video_path = os.path.join(img_train_val_path, videos)
                                 img_path = os.path.join(img_video_path, img_name)
                                 print("img_path:\t", img_path)
+                                self.have_check_inThisDir = self.have_check_inThisDir + 1
+                                self.ui.statusbar.addWidget(self.pbar)
+                                self.pbar.setValue(100 * (self.have_check_inThisDir ) / self.all_images_to_check_inThisDir)
                                 self.show_label_from_json(img_path, json_d)
             else:
                 self.num_of_check = 0
 
-    def click_toolButton_contoursPCA(self):
-        ssrc = cv2.imread("./test.jpg")
-        print("123")
-        angle , result  = getRotateDegreeUsingPCA(ssrc)
-        print("0000")
-        self.ui.label_imgShow.setPixmap(QtGui.QPixmap.fromImage(result))
+    def click_toolButton_startTest(self):
+        if abs(self.sensor_angles[0])>75:
+            print("start---------------")
 
 
 
