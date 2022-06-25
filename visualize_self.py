@@ -187,7 +187,11 @@ def get_cross_angle(p1, p2, p3, p4):
         arr_a = np.array([(p2[0] - p1[0]), (p2[1] - p1[1])])  # 向量a
         arr_b = np.array([(p4[0] - p3[0]), (p4[1] - p3[1])])  # 向量b
         cos_value = (float(arr_a.dot(arr_b)) / (np.sqrt(arr_a.dot(arr_a)) * np.sqrt(arr_b.dot(arr_b))))  # 注意转成浮点数运算
-        return np.arccos(cos_value) * (180 / np.pi)  # 两个向量的夹角的角度， 余弦值：cos_value, np.cos(para), 其中para是弧度，不是角度
+        if p2[0] <= p4[0]:
+            angle = np.arccos(cos_value) * (180 / np.pi)  # 两个向量的夹角的角度， 余弦值：cos_value, np.cos(para), 其中para是弧度，不是角度
+        else:
+            angle= - np.arccos(cos_value) * (180 / np.pi)
+        return angle
 
 
 def plot_tracking_dict(image,
@@ -206,6 +210,9 @@ def plot_tracking_dict(image,
     im = np.ascontiguousarray(np.copy(image))
     im_h, im_w = im.shape[:2]
     all_cross_angle = {}
+    dist_of_rectCenter_imgCenter = {}
+    min_dis = 1000
+    center_object_cls_id = -1
     text_scale = max(0.5, image.shape[1] / 3000.)
     text_thickness = 2
     line_thickness = max(1, int(image.shape[1] / 500.))
@@ -241,6 +248,7 @@ def plot_tracking_dict(image,
     for cls_id in range(num_classes):
         tlwhs = tlwhs_dict[cls_id]
         all_cross_angle[cls_id] = []
+        dist_of_rectCenter_imgCenter[cls_id] = []
         # top_tlwhs = top_online_tlwhs[cls_id]
         obj_ids = obj_ids_dict[cls_id]
         scores = scores_dict[cls_id]
@@ -251,6 +259,10 @@ def plot_tracking_dict(image,
             cv2.FONT_ITALIC,
             text_scale, (0, 0, 255),
             thickness=text_thickness)
+
+        if len(tlwhs) == 0:
+            for i in center_traj[cls_id]:
+                center_traj[cls_id][i] = deque(maxlen=30)
 
         record_id = set()
         for i, tlwh in enumerate(tlwhs):
@@ -279,6 +291,11 @@ def plot_tracking_dict(image,
 
             _line_thickness = 1 if obj_id <= 0 else line_thickness
             color = get_color(abs(obj_id))
+            dist_of_rect_img = pow(pow((x1 + w/2)-320,2) + pow((y1+h/2)-240,2),0.5)
+            dist_of_rectCenter_imgCenter[cls_id] = [(dist_of_rect_img,intbox[0:2], intbox[2:4])]
+            # print("dist_of_rect_img--==:",dist_of_rect_img)
+           
+           
             cv2.rectangle(
                 im,
                 intbox[0:2],
@@ -334,30 +351,50 @@ def plot_tracking_dict(image,
                             top_centerY = point[2:4][1]
                             # print("9999999909909999----99999:",top_centerX,top_centerY)
                     if pointX is not None and len(pointX) >= 10:
-                            poly = np.polyfit(pointX,pointY,deg=1)
-                            pointY_fit = np.polyval(poly, pointX)
-                            cv2.arrowedLine(im, (pointX[len(pointX)-1],int(pointY_fit[len(pointY_fit)-1])),(pointX[0],int(pointY_fit[0])),(0,0,255),1,8,0,0.3)
-                            if len(point) > 3:
-                                p1 = (pointX[len(pointX)-1],int(pointY_fit[len(pointY_fit)-1]))
-                                p2 = (top_centerX,top_centerY)
-                                
-                                p3 = (pointX[len(pointX)-1],int(pointY_fit[len(pointY_fit)-1]))
-                                p4 = (pointX[0],int(pointY_fit[0]))
-                                cv2.circle(im, p1, 5, (0, 0, 255), -1)
-                                cv2.circle(im, p2, 5, (0, 255, 0), -1)
-                                cv2.circle(im, p3, 5, (255, 255, 255), -1)
-                                cv2.circle(im, p4, 5, (255, 0, 0), -1)
-                                cross_angle = get_cross_angle(p1,p2,p3,p4)
-                                # print("=-=-=-=-=angle:_+_+_+_+_+",cross_angle)
-                                angle_text = 'angle: {:.2f}'.format(float(cross_angle))
-                                all_cross_angle[cls_id] = [cross_angle]
-                                # print("=====all_cross_angle+++++++:",all_cross_angle)
-                                cv2.putText(
-                                    im,
-                                    angle_text, (intbox[0], intbox[1] + 6),
-                                    cv2.FONT_ITALIC,
-                                    text_scale, (0, 255, 0),
-                                    thickness=1)
+                        poly = np.polyfit(pointX,pointY,deg=1)
+                        pointY_fit = np.polyval(poly, pointX)
+                        cv2.arrowedLine(im, (pointX[len(pointX)-1],int(pointY_fit[len(pointY_fit)-1])),(pointX[0],int(pointY_fit[0])),(0,0,255),1,8,0,0.3)
+                        if len(point) > 3:
+                            p1 = (pointX[len(pointX)-1],int(pointY_fit[len(pointY_fit)-1]))
+                            p2 = (top_centerX,top_centerY)
+                            
+                            p3 = (pointX[len(pointX)-1],int(pointY_fit[len(pointY_fit)-1]))
+                            p4 = (pointX[0],int(pointY_fit[0]))
+
+                            y_axis_top = (pointX[len(pointX)-1],int(pointY_fit[len(pointY_fit)-1]) - 150)
+                            y_axis_bottom = (pointX[len(pointX)-1],int(pointY_fit[len(pointY_fit)-1]) + 150)
+                            cv2.line(im, y_axis_bottom, y_axis_top, (0, 0, 255), 1, 4)
+                            
+                            cv2.circle(im, p1, 5, (0, 0, 255), -1)
+                            cv2.circle(im, p2, 5, (0, 255, 0), -1)
+                            cv2.circle(im, p3, 5, (255, 255, 255), -1)
+                            cv2.circle(im, p4, 5, (255, 0, 0), -1)
+
+                            obj_angle = get_cross_angle(p1,y_axis_top,p1,p2)
+
+                            cross_angle = get_cross_angle(p1,p2,p3,p4)
+
+                            tracking_angle = obj_angle + cross_angle
+                            # print("=-=-=-=-=angle:_+_+_+_+_+",cross_angle)
+                            angle_text = 'angle: {:.2f}-{:.2f}'.format(float(cross_angle),float(obj_angle))
+                            # dad = 'angle: {:.2f}'.format(float(tracking_angle))
+                            # dist_of_rect_img = pow(pow(pointX[len(pointX)-1]-320,2) + pow(int(pointY_fit[len(pointY_fit)-1])-240,2),0.5)
+                            
+                            all_cross_angle[cls_id] = [(obj_angle,cross_angle,tracking_angle)]
+                            # dist_of_rectCenter_imgCenter[cls_id] = [dist_of_rect_img]
+                            # print("=====all_cross_angle+++++++:",all_cross_angle)
+                            cv2.putText(
+                                im,
+                                angle_text, p3,
+                                cv2.FONT_ITALIC,
+                                text_scale, (0, 255, 0),
+                                thickness=1)
+                            # cv2.putText(
+                            #     im,
+                            #     dad, (pointX[len(pointX)-1],int(pointY_fit[len(pointY_fit)-1])+10),
+                            #     cv2.FONT_ITALIC,
+                            #     text_scale, (0, 255, 0),
+                            #     thickness=1)
                         
         
         # if pointX is not None and len(pointX)> 10:
@@ -369,4 +406,14 @@ def plot_tracking_dict(image,
         #     pointY_fit = np.polyval(poly, pointX)
 
         #     cv2.arrowedLine(im, (pointX[len(pointX)-1],int(pointY_fit[len(pointY_fit)-1])),(pointX[0],int(pointY_fit[0])),(0,0,255),1,8,0,0.3)
-    return im ,all_cross_angle
+    for cls_id in range(num_classes):
+        for data in dist_of_rectCenter_imgCenter[cls_id]:
+            dis,tl_p,br_p = data
+            if dis <min_dis:
+                min_dis = dis
+                center_object_cls_id = cls_id
+    dis,tl_p,br_p = dist_of_rectCenter_imgCenter[center_object_cls_id][0]
+    print("1121:",tl_p)
+    cv2.rectangle(im, tl_p,br_p, (0, 0, 255), 2)
+    
+    return im ,all_cross_angle,center_object_cls_id

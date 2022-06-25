@@ -97,7 +97,7 @@ class Detection(object):
 def write_mot_results(filename, results, data_type='mot', num_classes=1):
     # support single and multi classes
     if data_type in ['mot', 'mcmot']:
-        save_format = '{frame},{id},{x1:.4f},{y1:.4f},{w:.4f},{h:.4f},{top_x1:.4f},{top_y1:.4f},{top_w:.4f},{top_h:.4f},{score:.4f},{cls_id},{angle:.4f},-1,-1\n'
+        save_format = '{frame},{cls_id},{id},{x1:.4f},{y1:.4f},{w:.4f},{h:.4f},{top_x1:.4f},{top_y1:.4f},{top_w:.4f},{top_h:.4f},{score:.4f},{obj_angle:.4f},{cross_angle:.4f},{tracking_angle:.4f},-1,-1\n'
     elif data_type == 'kitti':
         save_format = '{frame} {id} car 0 0 -10 {x1} {y1} {x2} {y2} -10 -10 -10 -1000 -1000 -1000 -10\n'
     else:
@@ -120,8 +120,11 @@ def write_mot_results(filename, results, data_type='mot', num_classes=1):
                 else:
                     x1, y1, w, h = tlwh
                     x2, y2 = x1 + w, y1 + h
+                # print("angle=====",angle)
+                obj_angle ,cross_angle,tracking_angle = angle
                 line = save_format.format(
                     frame=frame_id,
+                    cls_id=cls_id,
                     id=track_id,
                     x1=x1,
                     y1=y1,
@@ -132,8 +135,9 @@ def write_mot_results(filename, results, data_type='mot', num_classes=1):
                     top_w=top_w,
                     top_h=top_h,
                     score=score,
-                    cls_id=cls_id,
-                    angle=angle)
+                    obj_angle=obj_angle,
+                    cross_angle=cross_angle,
+                    tracking_angle=tracking_angle)
                 f.write(line)
     print('MOT results save in {}'.format(filename))
 

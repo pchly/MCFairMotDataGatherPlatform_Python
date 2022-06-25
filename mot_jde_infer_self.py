@@ -335,7 +335,9 @@ class JDE_Detector(Detector):
             mot_results = self.predict_image(
                 [frame], visual=False, seq_name=seq_name)
             timer.toc()
+            # 目标追踪的结果 矩形框、评分和id信息
             online_tlwhs, online_scores, online_ids = mot_results[0]
+            # 截取的roi图像的存储地址
             roi_img_path = '' 
             
             if len(online_tlwhs) > 0:
@@ -344,6 +346,7 @@ class JDE_Detector(Detector):
                 for i in online_tlwhs:
                     class_id_mot = online_tlwhs[i]
                     # print("class_id_mot:",class_id_mot)
+                    # 截取的roi图像的存储地址
                     roi_img_path = "/home/aistudio/data/PaddleDetection/deploy/pptracking/python/roiImg/" + str(frame_id) + "_" + str(num_ids) + "_frame.png"
                     num_ids = num_ids + 1
                     # print("roi_img_path:",roi_img_path)
@@ -406,7 +409,7 @@ class JDE_Detector(Detector):
 
             fps = 1. / timer.duration
             # print("==================plot_tracking_dict=================")
-            im , angles = plot_tracking_dict(
+            im , angles ,target_object_cls_id= plot_tracking_dict(
                 frame,
                 num_classes,
                 online_tlwhs,

@@ -1,5 +1,9 @@
 <RCC>
   <qresource prefix="toolButton">
+    <file>static/ananlyse.png</file>
+    <file>static/deleteImg.png</file>
+    <file>static/startGather.png</file>
+    <file>static/stopGather.png</file>
     <file>static/roi.png</file>
     <file>static/transcoco.png</file>
     <file>static/generateAnnotaton.png</file>
