@@ -13,6 +13,9 @@ import cv2
 import json
 import glob
 import shutil
+import random
+import threading
+import queue
 import math
 from clipVideo import clipvideo
 from dataSetClipsToTaV import dataSetClipsTaV
@@ -71,6 +74,29 @@ class mainWindow(QMainWindow):
         self.FrameGapToClipVideo = 10
         self.label_list = []
         self.numFramePreVideo = 10
+
+
+        self.testPeoples = ["YuntaoLi","ChunyuanShi"]
+        self.testPeople = "YuntaoLi"
+        self.testPose = "stand"
+        self.testGroupAll = 2
+        self.testGroupCurrent = 0
+        self.testNumAll =13
+        self.testNumCurrent = 0
+        self.testObject = ['Bottled','Bagged','Boxed','Canned','Mug','Vials']
+        self.testObjectPart = ['Bottled_top','Bottled_side','Bagged_top','Bagged_side','Boxed_top','Boxed_side','Canned_top','Canned_side','Mug_top','Mug_handle','Mug_side','Vials_top','Vials_side']
+        self.sitGroupTestOrder = []
+        self.standGroupTestOrder = []
+        self.currentGroup = []
+        self.testResults = ['unknow','succeed','failure']
+        self.startTestTime_ms = 0.0
+        self.stopTestTime_ms = 0.0
+        self.testTime_ms = 0.0
+        self.timer_testRecord = QtCore.QTimer()  # 定时器
+
+        self.usbQueueImage = queue.Queue(maxsize=4)
+        self.realSenseColorImages = queue.Queue(maxsize=4)
+        self.realSenseDepthImages = queue.Queue(maxsize=4)
         # self.label_list=['Bottled','Bagged','Boxed','Canned','Mug','Vials']
         # 初始化
         self.init_ui()
@@ -126,10 +152,22 @@ class mainWindow(QMainWindow):
         self.ui.toolButton_startTest.clicked.connect(self.click_toolButton_startTest)
         self.ui.spinBox_picodata_num.valueChanged.connect(self.valueChangeed_spinBox_picodata_num)
         self.ui.toolButton_transToCOCO.clicked.connect(self.click_toolButton_transToCOCO)
+
+        self.ui.comboBox_testPeople.currentTextChanged.connect(self.textChanged_comboBox_testPeople)
+        self.ui.toolButton_nextTest.clicked.connect(self.click_toolButton_nextTest)
+        self.ui.toolButton_lastTest.clicked.connect(self.click_toolButton_lastTest)
         #菜单项的槽函数绑定
         self.ui.actionOpenFile.triggered.connect(self.menu_click_OpenFile)
         self.ui.actionOpenFile.setShortcut('Ctrl+O')#设置菜单项的快捷键
 
+        self.ui.comboBox_testPeople.addItems(self.testPeoples)
+        self.ui.spinBox_testGroupAll.setValue(self.testGroupAll)
+        self.ui.spinBox_testNumAll.setValue(self.testNumAll)
+        self.ui.comboBox_testResult.addItems(self.testResults)
+        self.ui.toolButton_scanCamera_test.clicked.connect(self.click_toolButton_scanCamera_test)
+        self.ui.comboBox_cameraDeviceList_wrist.currentTextChanged.connect(self.comboBox_activated_cameraDeviceList_wrist)
+        self.ui.comboBox_cameraDeviceList_record.currentTextChanged.connect(self.comboBox_activated_cameraDeviceList_record)
+        self.timer_testRecord.timeout.connect(self.timer_testRecord_timeout)
         # #设置label显示图像
         # icon = QPixmap(":/toolButton/static/endJaw.png")
         # self.ui.label_show.setPixmap(icon)
@@ -203,9 +241,10 @@ class mainWindow(QMainWindow):
                 self.saveDepthVideo_filepath = self.saveDepthVideo_dir + "video_" + timeplay + ".mp4"
                 # print(self.saveVideo_filepath)
                 self.out = cv2.VideoWriter(self.saveVideo_filepath, code, save_fps, self.frame_size,isColor=True)  # 保存视频的视频流
-                print(self.saveDepthVideo_filepath)
-                self.depth_out = cv2.VideoWriter(self.saveDepthVideo_filepath, code, save_fps, self.frame_size,
-                                                 isColor=False)  # 保存深度视频的视频流
+                if self.CAM_NUM == 10:
+                    print(self.saveDepthVideo_filepath)
+                    self.depth_out = cv2.VideoWriter(self.saveDepthVideo_filepath, code, save_fps, self.frame_size,
+                                                     isColor=False)  # 保存深度视频的视频流
 
                 self.isSaveVideoOutSeted = True
             if self.out.isOpened():  # 判断视频流是否创建成功
@@ -218,10 +257,10 @@ class mainWindow(QMainWindow):
                 self.out.write(self.image)
                 # self.depth_out.write(self.depth_img_colormap)
                 print('out is  writing...')
-
-            if self.depth_out.isOpened():  # 判断视频流是否创建成功
-                print("shendu视频流创建成功")
-                self.depth_out.write(self.depth_img_nomap)
+            if self.CAM_NUM == 10:
+                if self.depth_out.isOpened():  # 判断视频流是否创建成功
+                    print("shendu视频流创建成功")
+                    self.depth_out.write(self.depth_img_nomap)
 
         if self.CAM_NUM == 10:
             color_and_depth_images = np.hstack((show, self.depth_img_colormap))
@@ -259,7 +298,9 @@ class mainWindow(QMainWindow):
         else:
             if self.out.isOpened():
                 self.out.release()
-            self.depth_out.release()
+            if self.CAM_NUM == 10:
+                if self.depth_out.isOpened():
+                    self.depth_out.release()
             self.isSaveVideoChecked = False
             self.isSaveVideoOutSeted = False
             print("unchecked")
@@ -829,12 +870,284 @@ class mainWindow(QMainWindow):
                                 self.show_label_from_json(img_path, json_d)
             else:
                 self.num_of_check = 0
+    def generateTwoGroupTestOrder(self):
+        self.sitGroupTestOrder.clear()
+        self.standGroupTestOrder.clear()
+        for i in range(2):
+            self.testObjectPart = ['Bottled_top', 'Bottled_side', 'Bagged_top', 'Bagged_side', 'Boxed_top',
+                                   'Boxed_side', 'Canned_top', 'Canned_side', 'Mug_top', 'Mug_handle', 'Mug_side',
+                                   'Vials_top', 'Vials_side']
+            for j in range(13):
+                if i == 0:
+                    testSample = random.sample(self.testObjectPart, 1)
+                    self.testObjectPart.remove(testSample[0])
+                    self.standGroupTestOrder.append(testSample[0])
+                if i == 1:
+                    testSample = random.sample(self.testObjectPart, 1)
+                    self.testObjectPart.remove(testSample[0])
+                    self.sitGroupTestOrder.append(testSample[0])
+        print("self.sitGroupTestOrder",self.sitGroupTestOrder)
+        print("self.standGroupTestOrder",self.standGroupTestOrder)
 
+    def setObjectStatus(self,object,object_part):
+        self.ui.label_Object.setText(object)
+        self.ui.label_Object.setStyleSheet("background-color: rgb(0, 255, 255);")
+        if object_part == "top":
+            self.ui.label_ObjectTop.setStyleSheet("background-color: rgb(0, 255, 0);")
+            self.ui.label_objectSideR.setStyleSheet("background-color: rgb(222, 222, 222);")
+            self.ui.label_objectSideL.setStyleSheet("background-color: rgb(222, 222, 222);")
+        if object_part == "side":
+            self.ui.label_ObjectTop.setStyleSheet("background-color: rgb(222, 222, 222);")
+            self.ui.label_objectSideR.setStyleSheet("background-color: rgb(0, 255, 0);")
+            self.ui.label_objectSideL.setStyleSheet("background-color: rgb(222, 222, 222);")
+        if object_part == "handle":
+            self.ui.label_ObjectTop.setStyleSheet("background-color: rgb(222, 222, 222);")
+            self.ui.label_objectSideR.setStyleSheet("background-color: rgb(222, 222, 222);")
+            self.ui.label_objectSideL.setStyleSheet("background-color: rgb(0, 255, 0);")
+    def textChanged_comboBox_testPeople(self,text):
+        print("text:", text)
+        self.testPeople = text
+        self.testGroupCurrent = 0
+        self.testNumCurrent = 0
+        self.ui.spinBox_testNumCurrent.setValue(self.testNumCurrent + 1)
+        self.ui.spinBox_testGroupCurrent.setValue(self.testGroupCurrent + 1)
+        self.generateTwoGroupTestOrder()
+        self.currentGroup = self.standGroupTestOrder
+        self.testPose = "stand"
+        self.ui.label_sitOrStand.setText(self.testPose)
+
+        currnet_Object = self.currentGroup[self.testNumCurrent].split("_")[0]
+        currnet_Object_part = self.currentGroup[self.testNumCurrent].split("_")[1]
+        self.testInfo = self.testPeople + "_" + self.testPose + "_" + currnet_Object + "_" + currnet_Object_part
+        self.setObjectStatus(currnet_Object,currnet_Object_part)
+        self.ui.lineEdit_testObject.setText(str(currnet_Object))
+        self.ui.lineEdit_testObjectPart.setText(str(currnet_Object_part))
     def click_toolButton_startTest(self):
-        if abs(self.sensor_angles[0])>75:
-            print("start---------------")
+        if self.ui.toolButton_startTest.text() == "开始实验":
+            icon19 = QtGui.QIcon()
+            icon19.addPixmap(QtGui.QPixmap(":/toolButton/static/stopTest.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            self.ui.toolButton_startTest.setIcon(icon19)
+            self.ui.toolButton_startTest.setText("结束实验")
+
+            currentTime = QDateTime.currentDateTime()  # 获取现在的时间
+            self.startTestTime_ms = currentTime.toMSecsSinceEpoch()
+            self.stopTestTime_ms = self.startTestTime_ms
+            print("ms", self.startGatherTome_ms)
+
+            self.usbCameraThread = threadCameraUSB(self.record_camera, self.usbQueueImage,self.testInfo,self.startTestTime_ms)
+            self.usbCameraThread.start()
+            print("ms")
+
+            self.realSenseThread = threadRealSenseSensor(self.realSenseColorImages,self.realSenseDepthImages,self.testInfo)
+            self.realSenseThread.start()
+            print("ms")
 
 
+            self.timer_testRecord.start(30)
+        else:
+            icon19 = QtGui.QIcon()
+            icon19.addPixmap(QtGui.QPixmap(":/toolButton/static/startTest.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            self.ui.toolButton_startTest.setIcon(icon19)
+            self.ui.toolButton_startTest.setText("开始实验")
+            self.usbCameraThread.runUsbCamera = False
+            self.realSenseThread.runUsbCamera = False
+            self.timer_testRecord.stop()
+    def timer_testRecord_timeout(self):
+        # 可以考虑在realSense采集的while循环里面更新时间
+        self.ui.lineEdit_tesTime.setText(str(self.usbCameraThread.testTime))
+        if self.realSenseColorImages.qsize() > 0 and self.realSenseDepthImages.qsize() > 0:
+            # color_and_depth_images = self.realSenseColorImages.get()
+            print("9999")
+            color_and_depth_images = np.hstack((self.realSenseColorImages.get(), self.realSenseDepthImages.get()))
+            print("9999")
+            showImage = QtGui.QImage(color_and_depth_images.data, color_and_depth_images.shape[1],
+                                     color_and_depth_images.shape[0], QtGui.QImage.Format_RGB888)
+            self.ui.label_imgShow.setPixmap(QtGui.QPixmap.fromImage(showImage))
+            self.ui.label_imgShow.setScaledContents(True)
+    def click_toolButton_nextTest(self):
+        if self.testNumCurrent == 12 :
+            if self.testGroupCurrent == 0:
+                self.testNumCurrent = 0
+                self.testGroupCurrent = 1
+                # print(self.standGroupTestOrder)
+                # self.currentGroup.clear()
+                # print(self.standGroupTestOrder)
+                self.currentGroup = self.sitGroupTestOrder
+                self.testPose = "sit"
+                self.ui.label_sitOrStand.setText(self.testPose)
+                self.ui.spinBox_testNumCurrent.setValue(self.testNumCurrent+1)
+                self.ui.spinBox_testGroupCurrent.setValue(self.testGroupCurrent+1)
+        else:
+            self.testNumCurrent = self.testNumCurrent + 1
+            self.ui.spinBox_testNumCurrent.setValue(self.testNumCurrent + 1)
+            self.ui.spinBox_testGroupCurrent.setValue(self.testGroupCurrent + 1)
+
+        currnet_Object = self.currentGroup[self.testNumCurrent].split("_")[0]
+        currnet_Object_part = self.currentGroup[self.testNumCurrent].split("_")[1]
+        self.testInfo = self.testPeople + "_" + self.testPose + "_" + currnet_Object + "_" + currnet_Object_part
+        self.setObjectStatus(currnet_Object, currnet_Object_part)
+        self.ui.lineEdit_testObject.setText(str(currnet_Object))
+        self.ui.lineEdit_testObjectPart.setText(str(currnet_Object_part))
+
+    def click_toolButton_lastTest(self):
+        if self.testNumCurrent == 0:
+            if self.testGroupCurrent == 1:
+                self.testNumCurrent = 12
+                self.testGroupCurrent = 0
+                # print(self.standGroupTestOrder)
+                # self.currentGroup.clear()
+                # print(self.standGroupTestOrder)
+                self.currentGroup = self.standGroupTestOrder
+                self.testPose = "stand"
+                self.ui.label_sitOrStand.setText(self.testPose)
+                self.ui.spinBox_testNumCurrent.setValue(self.testNumCurrent + 1)
+                self.ui.spinBox_testGroupCurrent.setValue(self.testGroupCurrent + 1)
+        else:
+            self.testNumCurrent = self.testNumCurrent - 1
+            self.ui.spinBox_testNumCurrent.setValue(self.testNumCurrent + 1)
+            self.ui.spinBox_testGroupCurrent.setValue(self.testGroupCurrent + 1)
+
+        currnet_Object = self.currentGroup[self.testNumCurrent].split("_")[0]
+        currnet_Object_part = self.currentGroup[self.testNumCurrent].split("_")[1]
+        self.testInfo = self.testPeople + "_" + self.testPose + "_" + currnet_Object + "_" + currnet_Object_part
+        self.setObjectStatus(currnet_Object, currnet_Object_part)
+        self.ui.lineEdit_testObject.setText(str(currnet_Object))
+        self.ui.lineEdit_testObjectPart.setText(str(currnet_Object_part))
+
+    def click_toolButton_scanCamera_test(self):
+        pygame.camera.init()
+        self.camera_id_lis = pygame.camera.list_cameras()
+        print(self.camera_id_lis)
+        self.ui.comboBox_cameraDeviceList.addItems(self.camera_id_lis)
+        self.ui.comboBox_cameraDeviceList_wrist.addItems(self.camera_id_lis)
+        self.ui.comboBox_cameraDeviceList_record.addItems(self.camera_id_lis)
+
+    def comboBox_activated_cameraDeviceList_wrist(self,text):
+        if text == "Intel(R) RealSense(TM) Depth Camera 435i Depth" or text == "Intel(R) RealSense(TM) Depth Camera 435i RGB" :
+            self.wrist_camera = 10
+
+    def comboBox_activated_cameraDeviceList_record(self,text):
+        if text == "Integrated Camera":
+            self.record_camera  = self.camera_id_lis.index("Integrated Camera")
+            print("self.record_camera :",self.record_camera)
+        elif text == "LRCP USB2.0" :
+            self.record_camera = self.camera_id_lis.index("LRCP USB2.0")
+            print("self.record_camera :", self.record_camera)
+
+class threadCameraUSB(threading.Thread):
+    """usb camera
+    @access   Usb descriptor.
+    @queue    Output queue.
+    """
+    def __init__(self, access, queue,testInfo,startTestTime):
+        threading.Thread.__init__(self)
+        self.access = access
+        self.q = queue
+        self.runUsbCamera = True
+        self.image = None
+        self.out = None
+        self.cap = None
+        self.testInfo = testInfo
+        self.startTestTime_ms = startTestTime
+        self.stopTestTime_ms = startTestTime
+        self.testTime = 0.0
+    def setVideoOut(self):
+        # 保存视频
+        code = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')  # 编码格式
+        save_fps = 30  # 保存视频的帧率
+        time = QDateTime.currentDateTime()  # 获取现在的时间
+        timeplay = time.toString('yyyy_MM_dd_hh_mm_ss')  # 设置显示时间的格式
+        self.saveVideo_filepath = "./onlineTestData/testRecordVideos/" + self.testInfo + "_" + "video_" + timeplay + ".mp4"
+        # print(self.saveVideo_filepath)
+        self.frame_size = (int(self.cap.get(3)), int(self.cap.get(4)))  # 获取摄像头分辨率
+        self.out = cv2.VideoWriter(self.saveVideo_filepath, code, save_fps, self.frame_size, isColor=True)  # 保存视频的视频流
+    def save_video(self):
+        if self.out.isOpened():  # 判断视频流是否创建成功
+            print('out is  opened')
+            self.out.write(self.image)
+            print('out is  writing...')
+
+    def run(self):
+        self.cap = cv2.VideoCapture(self.access)
+        if self.cap.isOpened():
+            print('camera usb ' + str(self.access) + " connected.")
+            self.setVideoOut()
+
+        while self.runUsbCamera:
+            ret, self.image = self.cap.read()
+            # 设置记录时间
+            currentTime = QDateTime.currentDateTime()  # 获取现在的时间
+            self.stopTestTime_ms = currentTime.toMSecsSinceEpoch()
+            self.testTime = (self.stopTestTime_ms - self.startTestTime_ms) / 1000
+            if ret:
+                print("usbCamera")
+                self.q.put(self.image)
+                self.save_video()
+                self.q.get() if self.q.qsize() > 2 else time.sleep(0.01)
+        self.out.release()
+class threadRealSenseSensor(threading.Thread):
+    """usb camera
+    @access   Usb descriptor.
+    @queue    Output queue.
+    """
+    def __init__(self, colorQueue, depthQueue, testInfo):
+        threading.Thread.__init__(self)
+        print('opened1')
+        self.realSenseSensor = getDataFromRealSense()
+        self.realSenseSensor.config_sensor()
+        self.frame_size = (int(self.realSenseSensor.color_height), int(self.realSenseSensor.color_width))  # 获取摄像头分辨率
+        self.FPS = self.realSenseSensor.color_frame_rate  # 获取摄像头帧率
+        print('opened')
+
+        # self.access = access
+        self.color_q = colorQueue
+        self.depth_q = depthQueue
+        self.runUsbCamera = True
+        self.testInfo = testInfo
+        self.image = None
+        self.out = None
+        self.depth_out = None
+        # self.testInfo = testInfo
+        # self.startTestTime_ms = startTestTime
+        # self.stopTestTime_ms = startTestTime
+        # self.testTime = 0.0
+    def setVideoOut(self):
+        # 保存视频
+        code = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')  # 编码格式
+        save_fps = 30  # 保存视频的帧率
+        time = QDateTime.currentDateTime()  # 获取现在的时间
+        timeplay = time.toString('yyyy_MM_dd_hh_mm_ss')  # 设置显示时间的格式
+        self.saveVideo_filepath = "./onlineTestData/testWristCamVideos/color/" + self.testInfo + "_" + "color_video_" + timeplay + ".mp4"
+        # print(self.saveVideo_filepath)
+
+        self.saveDepthVideo_filepath = "./onlineTestData/testWristCamVideos/depth/" + self.testInfo + "_" + "depth_video_" + timeplay + ".mp4"
+        # print(self.saveVideo_filepath)
+        print(self.saveDepthVideo_filepath)
+        self.out = cv2.VideoWriter(self.saveVideo_filepath, code, save_fps, self.frame_size, isColor=True)  # 保存视频的视频流
+        self.depth_out = cv2.VideoWriter(self.saveDepthVideo_filepath, code, save_fps, self.frame_size,
+                                         isColor=False)  # 保存深度视频的视频流
+    def save_video(self):
+        if self.out.isOpened():  # 判断视频流是否创建成功
+            print('out is  opened')
+            self.out.write(self.image)
+            print('out is  writing...')
+        if self.depth_out.isOpened():  # 判断视频流是否创建成功
+            print("shendu视频流创建成功")
+            self.depth_out.write(self.depth_img_nomap)
+
+    def run(self):
+        self.setVideoOut()
+        while self.runUsbCamera:
+            self.image, self.depth_img_nomap, self.depth_img_colormap, self.gyro, self.sensor_angles = self.realSenseSensor.getFrames()
+            show = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+            self.color_q.put(show)
+            self.depth_q.put(self.depth_img_colormap)
+            print('real sense opened')
+            self.save_video()
+            self.color_q.get() if self.color_q.qsize() > 2 else time.sleep(0.01)
+
+        self.out.release()
+        self.depth_out.release()
 
 # 程序入口
 if __name__ == '__main__':

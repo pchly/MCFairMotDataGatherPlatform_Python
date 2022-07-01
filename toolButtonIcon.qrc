@@ -1,5 +1,7 @@
 <RCC>
   <qresource prefix="toolButton">
+    <file>static/startTest.png</file>
+    <file>static/stopTest.png</file>
     <file>static/ananlyse.png</file>
     <file>static/deleteImg.png</file>
     <file>static/startGather.png</file>

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1013</width>
+    <width>1110</width>
     <height>900</height>
    </rect>
   </property>
@@ -1049,7 +1049,7 @@ background-color:&quot;#bdbdbd&quot;;
          </size>
         </property>
         <property name="currentIndex">
-         <number>1</number>
+         <number>4</number>
         </property>
         <widget class="QWidget" name="tab">
          <attribute name="title">
@@ -1061,7 +1061,7 @@ background-color:&quot;#bdbdbd&quot;;
             <x>4</x>
             <y>0</y>
             <width>941</width>
-            <height>82</height>
+            <height>85</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_2">
@@ -2268,7 +2268,7 @@ background-color:&quot;#bdbdbd&quot;;
            </item>
           </layout>
          </widget>
-         <widget class="QWidget" name="">
+         <widget class="QWidget" name="layoutWidget">
           <property name="geometry">
            <rect>
             <x>370</x>
@@ -2448,7 +2448,7 @@ background-color:&quot;#bdbdbd&quot;;
            </item>
           </layout>
          </widget>
-         <widget class="QWidget" name="">
+         <widget class="QWidget" name="layoutWidget">
           <property name="geometry">
            <rect>
             <x>480</x>
@@ -2596,8 +2596,8 @@ background-color:&quot;#bdbdbd&quot;;
            <rect>
             <x>11</x>
             <y>11</y>
-            <width>958</width>
-            <height>75</height>
+            <width>1041</width>
+            <height>78</height>
            </rect>
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_19">
@@ -3483,65 +3483,987 @@ background-color:&quot;#bdbdbd&quot;;
         </widget>
         <widget class="QWidget" name="tab_3">
          <attribute name="title">
-          <string>采集实验</string>
+          <string>在线实验</string>
          </attribute>
-         <widget class="QToolButton" name="toolButton_startTest">
+         <widget class="QWidget" name="layoutWidget">
           <property name="geometry">
            <rect>
-            <x>40</x>
-            <y>10</y>
-            <width>63</width>
-            <height>73</height>
+            <x>1</x>
+            <y>1</y>
+            <width>1042</width>
+            <height>86</height>
            </rect>
           </property>
-          <property name="styleSheet">
-           <string notr="true"/>
-          </property>
-          <property name="text">
-           <string>开始实验</string>
-          </property>
-          <property name="icon">
-           <iconset resource="toolButtonIcon.qrc">
-            <normaloff>:/toolButton/static/clipVideo.png</normaloff>:/toolButton/static/clipVideo.png</iconset>
-          </property>
-          <property name="iconSize">
-           <size>
-            <width>50</width>
-            <height>50</height>
-           </size>
-          </property>
-          <property name="toolButtonStyle">
-           <enum>Qt::ToolButtonTextUnderIcon</enum>
-          </property>
-         </widget>
-         <widget class="QToolButton" name="toolButton_stopTest">
-          <property name="geometry">
-           <rect>
-            <x>120</x>
-            <y>10</y>
-            <width>63</width>
-            <height>73</height>
-           </rect>
-          </property>
-          <property name="styleSheet">
-           <string notr="true"/>
-          </property>
-          <property name="text">
-           <string>结束实验</string>
-          </property>
-          <property name="icon">
-           <iconset resource="toolButtonIcon.qrc">
-            <normaloff>:/toolButton/static/clipVideo.png</normaloff>:/toolButton/static/clipVideo.png</iconset>
-          </property>
-          <property name="iconSize">
-           <size>
-            <width>50</width>
-            <height>50</height>
-           </size>
-          </property>
-          <property name="toolButtonStyle">
-           <enum>Qt::ToolButtonTextUnderIcon</enum>
-          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_50">
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_45">
+             <item>
+              <layout class="QVBoxLayout" name="verticalLayout_16">
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_37">
+                 <item>
+                  <widget class="QLabel" name="label_42">
+                   <property name="minimumSize">
+                    <size>
+                     <width>70</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>70</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>实验人员：</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="comboBox_testPeople">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <weight>75</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_sitOrStand">
+                   <property name="minimumSize">
+                    <size>
+                     <width>50</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>50</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>stand</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_38">
+                 <item>
+                  <widget class="QLabel" name="label_48">
+                   <property name="minimumSize">
+                    <size>
+                     <width>70</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>70</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>共计进行：</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="spinBox_testGroupAll">
+                   <property name="minimumSize">
+                    <size>
+                     <width>42</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>30</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <weight>75</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="minimum">
+                    <number>2</number>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_50">
+                   <property name="minimumSize">
+                    <size>
+                     <width>10</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>10</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="sizeIncrement">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="baseSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>*</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="spinBox_testNumAll">
+                   <property name="minimumSize">
+                    <size>
+                     <width>42</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>30</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <weight>75</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="minimum">
+                    <number>13</number>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_52">
+                   <property name="minimumSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="sizeIncrement">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="baseSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>次</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_36">
+                 <property name="spacing">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_43">
+                   <property name="minimumSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="sizeIncrement">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="baseSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>第</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="spinBox_testGroupCurrent">
+                   <property name="minimumSize">
+                    <size>
+                     <width>42</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>35</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <weight>75</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_45">
+                   <property name="minimumSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="sizeIncrement">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="baseSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>组</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_46">
+                   <property name="minimumSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="sizeIncrement">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="baseSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>-</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_44">
+                   <property name="minimumSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="sizeIncrement">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="baseSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>第</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="spinBox_testNumCurrent">
+                   <property name="minimumSize">
+                    <size>
+                     <width>42</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>35</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <weight>75</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_47">
+                   <property name="minimumSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="sizeIncrement">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="baseSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>次</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_39">
+               <item>
+                <layout class="QVBoxLayout" name="verticalLayout_21">
+                 <property name="topMargin">
+                  <number>23</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_objectSideL">
+                   <property name="minimumSize">
+                    <size>
+                     <width>15</width>
+                     <height>50</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>15</width>
+                     <height>50</height>
+                    </size>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(0, 255, 127);</string>
+                   </property>
+                   <property name="text">
+                    <string>L</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QVBoxLayout" name="verticalLayout_17">
+                 <item>
+                  <widget class="QLabel" name="label_ObjectTop">
+                   <property name="minimumSize">
+                    <size>
+                     <width>50</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>50</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(220, 13, 165);</string>
+                   </property>
+                   <property name="text">
+                    <string>TOP</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_Object">
+                   <property name="minimumSize">
+                    <size>
+                     <width>50</width>
+                     <height>50</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>50</width>
+                     <height>50</height>
+                    </size>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(0, 170, 255);
+background-color: rgb(0, 255, 255);</string>
+                   </property>
+                   <property name="text">
+                    <string>Object</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QVBoxLayout" name="verticalLayout_20">
+                 <property name="topMargin">
+                  <number>23</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_objectSideR">
+                   <property name="minimumSize">
+                    <size>
+                     <width>15</width>
+                     <height>50</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>15</width>
+                     <height>50</height>
+                    </size>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(0, 255, 127);</string>
+                   </property>
+                   <property name="text">
+                    <string>R</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QVBoxLayout" name="verticalLayout_18">
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_40">
+                 <property name="spacing">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_57">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>100</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>抓取物品及位置：</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLineEdit" name="lineEdit_testObject">
+                   <property name="minimumSize">
+                    <size>
+                     <width>50</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>50</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <weight>75</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_56">
+                   <property name="minimumSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="sizeIncrement">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="baseSize">
+                    <size>
+                     <width>20</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>--</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLineEdit" name="lineEdit_testObjectPart">
+                   <property name="minimumSize">
+                    <size>
+                     <width>50</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>50</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <weight>75</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_43">
+                 <item>
+                  <layout class="QHBoxLayout" name="horizontalLayout_42">
+                   <property name="spacing">
+                    <number>0</number>
+                   </property>
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_41">
+                     <item>
+                      <widget class="QLabel" name="label_55">
+                       <property name="minimumSize">
+                        <size>
+                         <width>65</width>
+                         <height>15</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>65</width>
+                         <height>15</height>
+                        </size>
+                       </property>
+                       <property name="text">
+                        <string>实验时长：</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLineEdit" name="lineEdit_tesTime">
+                       <property name="minimumSize">
+                        <size>
+                         <width>50</width>
+                         <height>20</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>50</width>
+                         <height>20</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <weight>75</weight>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="label_58">
+                     <property name="minimumSize">
+                      <size>
+                       <width>65</width>
+                       <height>15</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>65</width>
+                       <height>15</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string>实验结果：</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QComboBox" name="comboBox_testResult">
+                     <property name="minimumSize">
+                      <size>
+                       <width>60</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>60</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                     <property name="font">
+                      <font>
+                       <weight>75</weight>
+                       <bold>true</bold>
+                      </font>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_44">
+                 <property name="spacing">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_59">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>100</width>
+                     <height>15</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>物品状态指示：</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_60">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(255, 0, 127);</string>
+                   </property>
+                   <property name="text">
+                    <string>物品已就位</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_48">
+               <item>
+                <layout class="QVBoxLayout" name="verticalLayout_19">
+                 <item>
+                  <layout class="QHBoxLayout" name="horizontalLayout_46">
+                   <item>
+                    <widget class="QLabel" name="label_49">
+                     <property name="minimumSize">
+                      <size>
+                       <width>40</width>
+                       <height>0</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>40</width>
+                       <height>16777215</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string>腕部：</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QComboBox" name="comboBox_cameraDeviceList_wrist">
+                     <property name="minimumSize">
+                      <size>
+                       <width>100</width>
+                       <height>23</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>100</width>
+                       <height>23</height>
+                      </size>
+                     </property>
+                     <property name="font">
+                      <font>
+                       <weight>75</weight>
+                       <bold>true</bold>
+                      </font>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item>
+                  <layout class="QHBoxLayout" name="horizontalLayout_47">
+                   <item>
+                    <widget class="QLabel" name="label_51">
+                     <property name="minimumSize">
+                      <size>
+                       <width>40</width>
+                       <height>0</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>40</width>
+                       <height>16777215</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string>录像：</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QComboBox" name="comboBox_cameraDeviceList_record">
+                     <property name="minimumSize">
+                      <size>
+                       <width>100</width>
+                       <height>23</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>100</width>
+                       <height>23</height>
+                      </size>
+                     </property>
+                     <property name="font">
+                      <font>
+                       <weight>75</weight>
+                       <bold>true</bold>
+                      </font>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <widget class="QToolButton" name="toolButton_scanCamera_test">
+                 <property name="styleSheet">
+                  <string notr="true"/>
+                 </property>
+                 <property name="text">
+                  <string>扫描相机</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="toolButtonIcon.qrc">
+                   <normaloff>:/toolButton/static/scanCamera.png</normaloff>:/toolButton/static/scanCamera.png</iconset>
+                 </property>
+                 <property name="iconSize">
+                  <size>
+                   <width>50</width>
+                   <height>50</height>
+                  </size>
+                 </property>
+                 <property name="toolButtonStyle">
+                  <enum>Qt::ToolButtonTextUnderIcon</enum>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_49">
+             <item>
+              <widget class="QToolButton" name="toolButton_startTest">
+               <property name="styleSheet">
+                <string notr="true"/>
+               </property>
+               <property name="text">
+                <string>开始实验</string>
+               </property>
+               <property name="icon">
+                <iconset resource="toolButtonIcon.qrc">
+                 <normaloff>:/toolButton/static/startTest.png</normaloff>:/toolButton/static/startTest.png</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>50</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="toolButtonStyle">
+                <enum>Qt::ToolButtonTextUnderIcon</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QToolButton" name="toolButton_lastTest">
+               <property name="styleSheet">
+                <string notr="true"/>
+               </property>
+               <property name="text">
+                <string>上组实验</string>
+               </property>
+               <property name="icon">
+                <iconset resource="toolButtonIcon.qrc">
+                 <normaloff>:/toolButton/static/last.png</normaloff>:/toolButton/static/last.png</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>50</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="toolButtonStyle">
+                <enum>Qt::ToolButtonTextUnderIcon</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QToolButton" name="toolButton_nextTest">
+               <property name="styleSheet">
+                <string notr="true"/>
+               </property>
+               <property name="text">
+                <string>下组实验</string>
+               </property>
+               <property name="icon">
+                <iconset resource="toolButtonIcon.qrc">
+                 <normaloff>:/toolButton/static/next.png</normaloff>:/toolButton/static/next.png</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>50</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="toolButtonStyle">
+                <enum>Qt::ToolButtonTextUnderIcon</enum>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
          </widget>
         </widget>
        </widget>
@@ -3572,7 +4494,7 @@ color: rgb(170, 255, 255);</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1013</width>
+     <width>1110</width>
      <height>33</height>
     </rect>
    </property>
